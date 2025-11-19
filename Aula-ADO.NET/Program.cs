@@ -1,16 +1,17 @@
 ﻿
 using Aula_ADO.NET;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Runtime.ConstrainedExecution;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 //Informar a conexão do banco 
 var connection = new SqlConnection(DBConnection.GetConnectionString());
 
 #region Insert
-
-var pessoa = new Pessoa("Maria Silva", "78965412300", new DateOnly(1985, 6, 6));
-
+//INSERT PESSOA
+var pessoa = new Pessoa("Tyrion Lannister", "12345678900", new DateOnly(1980, 6, 12));
 var sqlInsertPessoa = $"INSERT INTO Pessoas (nome, cpf, datanascimento) VALUES (@Nome, @CPF, @DataNascimento); SELECT SCOPE_IDENTITY();";
-
 
 connection.Open();
 
@@ -20,85 +21,229 @@ command.Parameters.AddWithValue("@Nome", pessoa.Nome);
 command.Parameters.AddWithValue("@CPF", pessoa.Cpf);
 command.Parameters.AddWithValue("@DataNascimento", pessoa.DataNascimento);
 
-//command.ExecuteNonQuery();  //>> Usado para fazer o Insert de forma direta, sem retornar nenhuma valor.
+int pessoaId = Convert.ToInt32(command.ExecuteScalar());   //Usado para fazer o Insert e retornar o primeiro valor da primeira coluna (neste caso: Id)
 
-//int pessoaId = Convert.ToInt32(command.ExecuteScalar());   // >> Usado para fazer o Insert e retornar o primeiro valor da primeira coluna (Id)
+//INSERT TELEFONE
+var telefone = new Telefone("11", "999765328", "Celular", pessoaId);
 
-//var telefone = new Telefone("11", "945218569", "Celular", pessoaId);
+var sqlInsertTelefone = $"INSERT INTO Telefones(ddd, numero, tipo, pessoaId) VALUES (@ddd, @Numero, @Tipo, @PessoaId);";
+command = new SqlCommand(sqlInsertTelefone, connection);
+command.Parameters.AddWithValue("@ddd", telefone.DDD);
+command.Parameters.AddWithValue("@Numero", telefone.Numero);
+command.Parameters.AddWithValue("@Tipo", telefone.Tipo);
+command.Parameters.AddWithValue("@PessoaID", telefone.PessoaId);
 
-//var sqlInsertTelefone = $"INSERT INTO Telefones(ddd, numero, tipo, pessoaId) VALUES (@DDD, @Numero, @Tipo, @PessoaId);";
-//command = new SqlCommand(sqlInsertTelefone, connection);
-//command.Parameters.AddWithValue("@ddd", telefone.DDD);
-//command.Parameters.AddWithValue("@Numero", telefone.Numero);
-//command.Parameters.AddWithValue("@Tipo", telefone.Tipo);
-//command.Parameters.AddWithValue("@PessoaID", telefone.PessoaId);
+command.ExecuteNonQuery();  //Usado para fazer o Insert de forma direta, sem retornar nenhuma valor.
 
-//command.ExecuteNonQuery();
+//INSERT ENDEREÇO
+var endereco = new Endereco("Avenida Padre Antonio", 100, null, "Jardim Universitário", "Matão", "SP", "115990358", pessoaId);
+
+var sqlInsertEndereco = $"INSERT INTO Enderecos(logradouro, numero, complemento, bairro, cidade, estado, cep, pessoaId) VALUES (@Logradouro, @Numero, @Complemento, @Bairro, @Cidade, @Estado, @Cep, @PessoaId)";
+command = new SqlCommand(sqlInsertEndereco, connection);
+command.Parameters.AddWithValue("@Logradouro", endereco.Logradouro);
+command.Parameters.AddWithValue("@Numero", endereco.Numero == null ? DBNull.Value : endereco.Numero);
+command.Parameters.AddWithValue("@Complemento", endereco.Complemento == null ? DBNull.Value : endereco.Complemento);
+command.Parameters.AddWithValue("@Bairro", endereco.Bairro);
+command.Parameters.AddWithValue("@Cidade", endereco.Cidade);
+command.Parameters.AddWithValue("@Estado", endereco.Estado);
+command.Parameters.AddWithValue("@Cep", endereco.Cep);
+command.Parameters.AddWithValue("@PessoaId", endereco.PessoaId);
+
+command.ExecuteNonQuery();
 
 connection.Close();
 #endregion
 
-#region SelectPessoa
+#region SelectPessoas
 connection.Open();
 
-var sqlSelectPessoas = "SELECT p.id, p.nome, p.cpf, p.dataNascimento " +
-                       "FROM Pessoas p";
+var sqlSelectPessoa = $"SELECT id, nome, cpf, dataNascimento FROM Pessoas";
 
-command = new SqlCommand(sqlSelectPessoas, connection);
+command = new SqlCommand(sqlSelectPessoa, connection);
 
 var reader = command.ExecuteReader();
 
-while (reader.Read())
+Console.WriteLine($"\n=-=-=-=-=-=-=-= LISTA DE PESSOAS =-=-=-=-=-=-=-=");
+while (reader.Read()) 
 {
-    var pessoaListada = new Pessoa(
+    pessoa = new Pessoa
+    (
         reader.GetString(1),
         reader.GetString(2),
-        DateOnly.FromDateTime(reader.GetDateTime(3))
-        );
-    pessoaListada.setId(reader.GetInt32(0));
+        DateOnly.FromDateTime(reader.GetDateTime(3))       
+    );
+    pessoa.SetId(reader.GetInt32(0));
 
+    Console.WriteLine($"{pessoa}\n");
 
-    Console.WriteLine($"\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
-    Console.WriteLine($"\n{pessoaListada}\n");
 }
-reader.Close();
+
 
 connection.Close();
 #endregion
 
-#region SelectPessoaTelefone
+#region SelectPessoasTelefone
 connection.Open();
 
-var sqlSelectPessoasTel = "SELECT p.id, p.nome, p.cpf, p.dataNascimento, t.id, t.ddd, t.numero, t.tipo, t.pessoaId " +
+var sqlSelectPessoasTelefone = "SELECT p.id, p.nome, p.cpf, p.dataNascimento, t.ddd, t.numero, t.tipo, t.pessoaId " +
                        "FROM Pessoas p " +
                        "JOIN Telefones t " +
                        "ON t.pessoaId = p.id";
 
-command = new SqlCommand(sqlSelectPessoasTel, connection);
+command = new SqlCommand(sqlSelectPessoasTelefone, connection);
 
 reader = command.ExecuteReader();
 
+var pessoasTelefone = new List<Pessoa>();
+
+var telefones = new List<Telefone>();
+
+Console.WriteLine($"\n=-=-=-=-=-=LISTA DE PESSOAS E TELEFONES=-=-=-=-=-=");
 while (reader.Read())
 {
-    var pessoaListada = new Pessoa(
+    var idPessoa = reader.GetInt32(0);
+
+    telefones.Add(new Telefone(
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetInt32(7)
+    ));
+
+    if(pessoasTelefone.Any(p => p.Id == idPessoa))
+    {
+        var pessoalistada = pessoasTelefone.Find(p => p.Id == idPessoa);
+        pessoalistada.Telefones.Add(telefones.Last());
+        continue;
+    }
+
+    var novaPessoa = new Pessoa(
         reader.GetString(1),
         reader.GetString(2),
         DateOnly.FromDateTime(reader.GetDateTime(3))
-        );
-    pessoaListada.setId(reader.GetInt32(0));
-    var telefoneListado = new Telefone(
-        reader.GetString(5),
-        reader.GetString(6),
-        reader.GetString(7),
-        reader.GetInt32(8)
-        );
+    );
 
-    Console.WriteLine($"\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
-    Console.WriteLine($"\n{pessoaListada}\n{telefoneListado}");
+    novaPessoa.SetId(idPessoa);
+    novaPessoa.Telefones.Add(telefones.Last());
+
+    pessoasTelefone.Add(novaPessoa);
+
+
 }
-reader.Close();
+
+foreach (var p in pessoasTelefone) 
+{
+    Console.WriteLine(p);
+}
 
 connection.Close();
+#endregion
+
+#region SelectPessoasEndereço
+connection.Open();
+
+var sqlSelectPessoasEndereco = $"SELECT p.id, p.nome, p.cpf, p.dataNascimento, " +
+                            $"e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado, e.cep, e.pessoaId " +
+                            $"FROM Pessoas p " +
+                            $"LEFT JOIN Enderecos e " +
+                            $"ON p.id = e.pessoaId";
+
+command = new SqlCommand(sqlSelectPessoasEndereco, connection);
+
+reader = command.ExecuteReader();
+
+var pessoasEndereco = new List<Pessoa>();
+var enderecos = new List<Endereco>();
+
+Console.WriteLine($"\n=-=-=-=-=-= LISTA DE PESSOAS E ENDERECOS =-=-=-=-=-=");
+while (reader.Read()) 
+{
+    var idPessoa = reader.GetInt32(0);
+
+    enderecos.Add(new Endereco(
+        reader.IsDBNull(4) ? null : reader.GetString(4),
+        reader.IsDBNull(5) ? null : reader.GetInt32(5),
+        reader.IsDBNull(6) ? null : reader.GetString(6),
+        reader.IsDBNull(7) ? null : reader.GetString(7),
+        reader.IsDBNull(8) ? null : reader.GetString(8),
+        reader.IsDBNull(9) ? null : reader.GetString(9),
+        reader.IsDBNull(10) ? null : reader.GetString(10),
+        reader.IsDBNull(11) ? null : reader.GetInt32(11)
+    ));
+
+    if (enderecos.Any(e => e.Id == idPessoa)) 
+    {
+        var pessoaListada = pessoasEndereco.Find(p => p.Id == idPessoa);
+        pessoaListada.Enderecos.Add(enderecos.Last());
+        continue;      
+    }
+
+    var novaPessoa = new Pessoa(
+        reader.GetString(1),
+        reader.GetString(2),
+        DateOnly.FromDateTime(reader.GetDateTime(3))
+    );
+    novaPessoa.SetId(idPessoa);
+
+    novaPessoa.Enderecos.Add(enderecos.Last());
+
+    pessoasEndereco.Add(novaPessoa);
+}
+
+foreach(var p in pessoasEndereco)
+{
+    Console.WriteLine(p);
+}
+
+connection.Close();
+#endregion
+
+#region SelectPessoasTelefonesEndereço
+connection.Open();
+
+var sqlSelectPessoaTelefoneEndereco = $"SELECT p.id, p.nome, p.cpf, p.dataNascimento, " +
+                                    $"t.id, t.ddd, t.numero, t.tipo, t.pessoaId, " +
+                                    $"e.id, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado, e.cep, e.pessoaId " +
+                                    $"FROM Pessoas p " +
+                                    $"JOIN Enderecos e " +
+                                    $"ON p.id = e.pessoaId " +
+                                    $"JOIN Telefones t " +
+                                    $"ON p.id = t.pessoaId";
+
+command = new SqlCommand(sqlSelectPessoaTelefoneEndereco, connection);
+
+reader = command.ExecuteReader();
+Console.WriteLine($"\n=-=-=-= LISTA DE PESSOAS, TELEFONES E ENDEREÇOS =-=-=-=");
+while (reader.Read()) 
+{
+    var idPessoa = reader.GetInt32(0);
+
+    enderecos.Add(new Endereco(
+        reader.IsDBNull(10) ? null : reader.GetString(10),
+        reader.IsDBNull(11) ? null : reader.GetInt32(11),
+        reader.IsDBNull(12) ? null : reader.GetString(12),
+        reader.IsDBNull(13) ? null : reader.GetString(13),
+        reader.IsDBNull(14) ? null : reader.GetString(14),
+        reader.IsDBNull(15) ? null : reader.GetString(15),
+        reader.IsDBNull(16) ? null : reader.GetString(16),
+        reader.IsDBNull(17) ? null : reader.GetInt32(17)
+    ));
+
+
+    if (pessoasTelefone.Any(p => p.Id == idPessoa))
+    {
+        var pessoalistada = pessoasTelefone.Find(p => p.Id == idPessoa);
+        pessoalistada.Enderecos.Add(enderecos.Last());
+        continue;
+    }
+    
+}
+
+foreach (var p in pessoasTelefone)
+{
+    Console.WriteLine(p);
+}
+
 #endregion
 
 #region Update

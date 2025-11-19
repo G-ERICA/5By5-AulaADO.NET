@@ -14,6 +14,7 @@ namespace Aula_ADO.NET
         public string Numero { get; private set; }
         public string Tipo { get; private set; }
         public int PessoaId { get; private set; }
+        
 
         public Telefone(string ddd, string numero, string tipo, int pessoaId)
         {
@@ -25,7 +26,7 @@ namespace Aula_ADO.NET
 
         public override string ToString() 
         {
-            return $"DDD: {DDD}\nNúmero: {Numero}\nTipo: {Tipo}";
+            return $"\nDDD: {DDD}\nNúmero: {Numero}\nTipo: {Tipo}";
         }
 
     }

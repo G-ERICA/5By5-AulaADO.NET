@@ -11,13 +11,13 @@ GO
 CREATE TABLE [dbo].[Enderecos](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[logradouro] [varchar](100) NOT NULL,
-	[numero] [int] NOT NULL,
+	[numero] [int] NULL,
 	[complemento] [varchar](100) NULL,
 	[bairro] [varchar](100) NOT NULL,
 	[cidade] [varchar](100) NOT NULL,
 	[estado] [varchar](2) NOT NULL,
 	[cep] [varchar](10) NOT NULL,
-	[pessoaId] [int] NULL,
+	[pessoaId] [int] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
