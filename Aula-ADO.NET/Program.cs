@@ -1,16 +1,14 @@
 ﻿
 using Aula_ADO.NET;
 using Microsoft.Data.SqlClient;
-using System.Data;
-using System.Runtime.ConstrainedExecution;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
 
 //Informar a conexão do banco 
 var connection = new SqlConnection(DBConnection.GetConnectionString());
 
 #region Insert
 //INSERT PESSOA
-var pessoa = new Pessoa("Tyrion Lannister", "12345678900", new DateOnly(1980, 6, 12));
+var pessoa = new Pessoa("Sophia Oliveira", "75395185200", new DateOnly(1996, 12, 15));
 var sqlInsertPessoa = $"INSERT INTO Pessoas (nome, cpf, datanascimento) VALUES (@Nome, @CPF, @DataNascimento); SELECT SCOPE_IDENTITY();";
 
 connection.Open();
@@ -24,7 +22,7 @@ command.Parameters.AddWithValue("@DataNascimento", pessoa.DataNascimento);
 int pessoaId = Convert.ToInt32(command.ExecuteScalar());   //Usado para fazer o Insert e retornar o primeiro valor da primeira coluna (neste caso: Id)
 
 //INSERT TELEFONE
-var telefone = new Telefone("11", "999765328", "Celular", pessoaId);
+var telefone = new Telefone("11", "9999653258", "Celular", pessoaId);
 
 var sqlInsertTelefone = $"INSERT INTO Telefones(ddd, numero, tipo, pessoaId) VALUES (@ddd, @Numero, @Tipo, @PessoaId);";
 command = new SqlCommand(sqlInsertTelefone, connection);
@@ -36,7 +34,7 @@ command.Parameters.AddWithValue("@PessoaID", telefone.PessoaId);
 command.ExecuteNonQuery();  //Usado para fazer o Insert de forma direta, sem retornar nenhuma valor.
 
 //INSERT ENDEREÇO
-var endereco = new Endereco("Avenida Padre Antonio", 100, null, "Jardim Universitário", "Matão", "SP", "115990358", pessoaId);
+var endereco = new Endereco("Estrada Rural Antonio Carlos", null, "Sitio Arco-Iris", "Bairro Rural", "São Paulo", "SP", "11604774", pessoaId);
 
 var sqlInsertEndereco = $"INSERT INTO Enderecos(logradouro, numero, complemento, bairro, cidade, estado, cep, pessoaId) VALUES (@Logradouro, @Numero, @Complemento, @Bairro, @Cidade, @Estado, @Cep, @PessoaId)";
 command = new SqlCommand(sqlInsertEndereco, connection);
@@ -198,54 +196,6 @@ foreach(var p in pessoasEndereco)
 connection.Close();
 #endregion
 
-#region SelectPessoasTelefonesEndereço
-connection.Open();
-
-var sqlSelectPessoaTelefoneEndereco = $"SELECT p.id, p.nome, p.cpf, p.dataNascimento, " +
-                                    $"t.id, t.ddd, t.numero, t.tipo, t.pessoaId, " +
-                                    $"e.id, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado, e.cep, e.pessoaId " +
-                                    $"FROM Pessoas p " +
-                                    $"JOIN Enderecos e " +
-                                    $"ON p.id = e.pessoaId " +
-                                    $"JOIN Telefones t " +
-                                    $"ON p.id = t.pessoaId";
-
-command = new SqlCommand(sqlSelectPessoaTelefoneEndereco, connection);
-
-reader = command.ExecuteReader();
-Console.WriteLine($"\n=-=-=-= LISTA DE PESSOAS, TELEFONES E ENDEREÇOS =-=-=-=");
-while (reader.Read()) 
-{
-    var idPessoa = reader.GetInt32(0);
-
-    enderecos.Add(new Endereco(
-        reader.IsDBNull(10) ? null : reader.GetString(10),
-        reader.IsDBNull(11) ? null : reader.GetInt32(11),
-        reader.IsDBNull(12) ? null : reader.GetString(12),
-        reader.IsDBNull(13) ? null : reader.GetString(13),
-        reader.IsDBNull(14) ? null : reader.GetString(14),
-        reader.IsDBNull(15) ? null : reader.GetString(15),
-        reader.IsDBNull(16) ? null : reader.GetString(16),
-        reader.IsDBNull(17) ? null : reader.GetInt32(17)
-    ));
-
-
-    if (pessoasTelefone.Any(p => p.Id == idPessoa))
-    {
-        var pessoalistada = pessoasTelefone.Find(p => p.Id == idPessoa);
-        pessoalistada.Enderecos.Add(enderecos.Last());
-        continue;
-    }
-    
-}
-
-foreach (var p in pessoasTelefone)
-{
-    Console.WriteLine(p);
-}
-
-#endregion
-
 #region Update
 
 connection.Open();
@@ -253,10 +203,10 @@ connection.Open();
 var sqlUpdatePessoa = "UPDATE Pessoas SET nome = @Nome WHERE id = @Id;";
 
 command = new SqlCommand(sqlUpdatePessoa, connection);
-command.Parameters.AddWithValue("@Nome", "Felipe Silva");
+command.Parameters.AddWithValue("@Nome", "Clarice Costa");
 command.Parameters.AddWithValue("Id", 1);
 
-command.ExecuteNonQuery();
+//command.ExecuteNonQuery();
 connection.Close();
 #endregion
 
@@ -267,7 +217,7 @@ var sqlDeletePessoa = "DELETE FROM Pessoas WHERE id = @Id;";
 
 command = new SqlCommand(sqlDeletePessoa, connection);
 command.Parameters.AddWithValue("Id", 2);
-command.ExecuteNonQuery();
+//command.ExecuteNonQuery();
 
 connection.Close();
 
